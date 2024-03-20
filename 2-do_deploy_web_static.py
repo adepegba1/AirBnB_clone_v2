@@ -1,64 +1,35 @@
 #!/usr/bin/python3
-"""Generates a .tgz archive from the
-contents of the web_static folder
-Distributes an archive to a web server"""
-
-from fabric.operations import local, run, put
-from datetime import datetime
+#  Fabric script that generates a .tgz archive from the
+# contents of the web_static folder of your AirBnB Clone repo
+# using the function do_pack
 import os
-from fabric.api import env
-import re
+from fabric.api import run, put, env
 
-
-env.hosts = ['54.89.119.136', '34.204.95.144']
-
-
-def do_pack():
-    """Function to compress files in an archive"""
-    local("mkdir -p versions")
-    result = local("tar -cvzf versions/web_static_{}.tgz web_static"
-                   .format(datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")),
-                   capture=True)
-    if result.failed:
-        return None
-    return result
+env.hosts = ['44.192.38.3', '3.239.82.120']
+env.user = "ubuntu"
 
 
 def do_deploy(archive_path):
-    """Function to distribute an archive to a server"""
-    if not os.path.exists(archive_path):
+    """Create a tar gzipped archive of the directory web_static."""
+    if os.path.exists(archive_path) is False:
         return False
-    rex = r'^versions/(\S+).tgz'
-    match = re.search(rex, archive_path)
-    filename = match.group(1)
-    res = put(archive_path, "/tmp/{}.tgz".format(filename))
-    if res.failed:
-        return False
-    res = run("mkdir -p /data/web_static/releases/{}/".format(filename))
-    if res.failed:
-        return False
-    res = run("tar -xzf /tmp/{}.tgz -C /data/web_static/releases/{}/"
-              .format(filename, filename))
-    if res.failed:
-        return False
-    res = run("rm /tmp/{}.tgz".format(filename))
-    if res.failed:
-        return False
-    res = run("mv /data/web_static/releases/{}"
-              "/web_static/* /data/web_static/releases/{}/"
-              .format(filename, filename))
-    if res.failed:
-        return False
-    res = run("rm -rf /data/web_static/releases/{}/web_static"
-              .format(filename))
-    if res.failed:
-        return False
-    res = run("rm -rf /data/web_static/current")
-    if res.failed:
-        return False
-    res = run("ln -s /data/web_static/releases/{}/ /data/web_static/current"
-              .format(filename))
-    if res.failed:
-        return False
-    print('New version deployed!')
-    return True
+    else:
+        try:
+            put(archive_path, "/tmp/")
+            """ putting the file to .tgz """
+            file_name = archive_path.split("/")[1]
+            """ splitting .tgz """
+            file_name2 = file_name.split(".")[0]
+            """ spliting archivo """
+            final_name = "/data/web_static/releases/" + file_name2 + "/"
+            run("mkdir -p " + final_name)
+            run("tar -xzf /tmp/" + file_name + " -C " + final_name)
+            run("rm /tmp/" + file_name)
+            run("mv " + final_name + "web_static/* " + final_name)
+            run("rm -rf " + final_name + "web_static")
+            run("rm -rf /data/web_static/current")
+            run("ln -s " + final_name + " /data/web_static/current")
+            print("New version deployed!")
+            return True
+        except Exception:
+            return False
